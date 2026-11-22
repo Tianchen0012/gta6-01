@@ -1,63 +1,94 @@
-// Tunable constants for Solmar — Streets of Gold. One place for every number the
-// world, the cars, the police and the missions share, so balance lives here, not
-// scattered through the update code.
-export const STEP = 1 / 60;
-export const SAVE_KEY = 'solmar-streets-of-gold-save-v1';
+// Neon Tide — config.js
+// Every tuning number for the game lives here so the rest of the code
+// reads like a description of Solmar Bay instead of a pile of literals.
 
-// World layout: a 10-by-10 street grid. Roads are 64 px wide, blocks 296 px.
-export const CITY_SIZE = 3600;
-export const ROAD_WIDTH = 64;
-export const BLOCK = 360;
-export const ROAD_COUNT = 10;
+export const WORLD = {
+  width: 3600,
+  height: 3200,
+  roadWidth: 96,
+  laneWidth: 48,
+  // Road centre lines form the city grid. The strip east of x=3200 is beach + ocean.
+  roadXs: [200, 600, 1000, 1400, 1800, 2200, 2600, 3000],
+  roadYs: [200, 600, 1000, 1400, 1800, 2200, 2600, 3000],
+  beachX: 3050,
+  oceanX: 3220,
+};
 
-// On-foot movement.
-export const WALK_SPEED = 175;
-export const SPRINT_SPEED = 265;
+export const DISTRICTS = [
+  { name: 'Old Town', x: 0, y: 0, w: 1100, h: 1100, style: 'old' },
+  { name: 'Downtown', x: 1100, y: 1100, w: 1300, h: 1300, style: 'downtown' },
+  { name: 'The Marina', x: 2100, y: 2200, w: 1100, h: 1000, style: 'marina' },
+  { name: 'Palm Heights', x: 0, y: 2200, w: 1100, h: 1000, style: 'suburb' },
+  { name: 'North Park', x: 2100, y: 0, w: 1100, h: 1100, style: 'park' },
+];
 
-// Driving: arcade handling, forgiving on purpose.
-export const CAR_ACCEL = 620;
-export const CAR_BRAKE = 900;
-export const CAR_REVERSE_MAX = 220;
-export const CAR_MAX_SPEED = 560;
-export const POLICE_MAX_SPEED = 600;
-export const TRAFFIC_SPEED = 150;
-export const CAR_STEER = 2.6;
+export const PLAYER = {
+  walkSpeed: 210,
+  sprintSpeed: 330,
+  radius: 13,
+  maxHealth: 100,
+  punchDamage: 12,
+  bulletDamage: 34,
+  fireCooldown: 0.22,
+  bulletSpeed: 900,
+};
 
-// Combat.
-export const PLAYER_MAX_HEALTH = 100;
-export const PISTOL_DAMAGE = 34;
-export const PISTOL_MAG = 12;
-export const PISTOL_RANGE = 520;
-export const PISTOL_RATE = 0.22;
-export const ENEMY_HEALTH = 68;
+export const CAR = {
+  accel: 520,
+  reverseAccel: 300,
+  maxSpeed: 560,
+  maxReverse: 180,
+  turnRate: 2.6,
+  grip: 3.2,
+  brake: 700,
+  handbrakeGrip: 1.1,
+};
 
-// Wanted: points decay when no officer can see the player.
-export const WANTED_DECAY = 2.2;
-export const WANTED_CRIME_CAR = 1;
-export const WANTED_CRIME_HIT_PED = 2;
-export const WANTED_CRIME_SHOOT = 1;
-export const WANTED_CRIME_KILL_COP = 3;
+export const TRAFFIC = {
+  count: 26,
+  speed: 150,
+  minGap: 46,
+};
 
-// Rewards.
-export const MISSION_REWARDS = [400, 650, 900, 1200, 2500];
-export const START_CASH = 150;
+export const PEDS = { count: 42, speed: 55 };
 
-// Colours: a warm, sun-soaked coastal palette, all drawn, no image files.
+export const POLICE = {
+  maxCars: 6,
+  carSpeed: 520,
+  ramDamage: 6,
+  footSpeed: 240,
+  // Seconds the player must stay out of every cop's sight to drop a star.
+  loseSightSeconds: 9,
+  sightRange: 620,
+};
+
+export const WANTED = {
+  stealCar: 1,
+  hitPed: 2,
+  shoot: 2,
+  killCop: 3,
+  max: 5,
+};
+
 export const COLORS = {
-  grass: '#7fae62',
-  grassDark: '#74a258',
-  sand: '#e8d9a0',
-  water: '#2f7fa8',
-  waterDeep: '#256b90',
+  grass: '#7fae5a',
+  grassDark: '#74a24f',
+  sand: '#e8d29a',
+  ocean: '#2f7fb8',
+  oceanDeep: '#256b9e',
   road: '#3a3f46',
   roadEdge: '#2c3036',
-  sidewalk: '#b9b3a4',
   lane: '#d8c95a',
-  buildingRoof: ['#c96f4a', '#b85c5c', '#7d8aa0', '#a08a5c', '#5c8a7d', '#946b8f', '#8a7a5c', '#6b7d9e'],
-  buildingEdge: '#00000033',
-  parkTree: '#3f7d3a',
-  parkTreeDark: '#356b31',
-  carColors: ['#d64545', '#3f7fd6', '#e8c33f', '#e8e8e8', '#3a3a3a', '#7fc94f', '#c96fd6', '#f08a2e'],
+  sidewalk: '#9aa0a3',
+  buildingRoof: ['#b5654a', '#c98a4b', '#7d8aa0', '#a06a7d', '#5f7d6a', '#8a6f4d'],
+  downtownRoof: ['#5a6b84', '#6b7d94', '#4e5f78', '#7d94a8'],
+  park: '#5d9b4e',
+  carPalette: ['#c0392b', '#2980b9', '#f1c40f', '#ecf0f1', '#2c3e50', '#8e44ad', '#e67e22', '#16a085', '#d35400'],
   policeCar: '#e8e8e8',
-  taxi: '#f2c230',
+  policeLight: ['#ff2d2d', '#2d7bff'],
+  hud: '#101820',
 };
+
+export const SAVE_KEY = 'neon-tide-save-v1';
+
+export const VIEW = { width: 1280, height: 720 };

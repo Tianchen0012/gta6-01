@@ -1,184 +1,114 @@
-// The story of Solmar: Jax Marlow, new in town, doing jobs for the fixer Mara Voss.
-// Five missions, each a small state machine over the same world: drive somewhere,
-// fight someone, or lose the police. All names, places and people are invented.
-import { MISSION_REWARDS } from './config.js';
+// Neon Tide — missions.js
+// The story of Milo Kade, and the five jobs that pay off his debt to
+// Odette Voss of the Vesper Club. Each mission is a small state machine:
+// a list of objectives, each with a place on the map and a test for done.
 
 export const STORY_INTRO =
-  'Jax Marlow came to Solmar with a duffel bag and a debt. The fixer Mara Voss has work for anyone fast enough — and dumb enough — to take it.';
+  'Milo Kade drove out of Solmar Bay three years ago with a busted gearbox and a worse reputation. ' +
+  'Now he is back, and Odette Voss — who owns the Vesper Club and half the waterfront — ' +
+  'says his old debt is due. Five jobs, she says. Do them, and the slate is clean. ' +
+  'Refuse, and the tide takes him.';
 
-// Each mission: a title, Mara's briefing, and the steps it walks through.
-// A step is { kind, label, x, y, seconds?, kills? }; the world checks it off.
+// place keys match city.landmarks; x/y are set from the city at mission start.
 export const MISSIONS = [
   {
-    title: 'First Wheels',
-    briefing: 'Mara: "You need wheels before you need anything else. Take any car on the street and bring it to my garage up north."',
-    reward: MISSION_REWARDS[0],
-    steps: [
-      { kind: 'steal', label: 'Steal a car (walk up to one and press E)', x: 0, y: 0 },
-      { kind: 'goto', label: 'Drive to the North Garage', x: 540, y: 540 },
+    id: 'homecoming',
+    title: '1 · Homecoming',
+    briefing: 'Odette wants to see you. Drive to the Vesper Club in Downtown and hear her out. Follow the gold marker — stealing a car is faster than walking, and nobody in Solmar minds much.',
+    reward: 300,
+    objectives: [
+      { id: 'goto-club', text: 'Drive to the Vesper Club', place: 'vesperClub', kind: 'reach', radius: 130 },
+      { id: 'talk', text: 'Step inside (walk to the door)', place: 'vesperClub', kind: 'reach', radius: 60, onFoot: true },
     ],
   },
   {
-    title: 'Harbour Run',
-    briefing: 'Mara: "A package for the docks. Pier 9, ninety seconds, no questions. The harbour cops are bored tonight — keep it that way."',
-    reward: MISSION_REWARDS[1],
-    steps: [
-      { kind: 'goto', label: 'Drive to Pier 9 before the timer runs out', x: 1620, y: 3250, seconds: 90 },
+    id: 'the-pickup',
+    title: '2 · The Pickup',
+    briefing: 'A package is waiting at the Marina — a locked case, no questions. Collect it and bring it back to the Vesper Club. The Harbormen have been sniffing around the docks, so keep your eyes open.',
+    reward: 500,
+    objectives: [
+      { id: 'goto-marina', text: 'Collect the case at the Marina', place: 'marina', kind: 'reach', radius: 120 },
+      { id: 'return-club', text: 'Deliver the case to the Vesper Club', place: 'vesperClub', kind: 'reach', radius: 130, needsItem: true },
     ],
   },
   {
-    title: 'Street Heat',
-    briefing: 'Mara: "The Vipers are leaning on my shops at the Plaza. Go remind them whose streets these are. Bring a gun — there will be three of them."',
-    reward: MISSION_REWARDS[2],
-    steps: [
-      { kind: 'goto', label: 'Get to Solmar Plaza', x: 2340, y: 900 },
-      { kind: 'kill', label: 'Deal with the Vipers (0/3)', x: 2340, y: 900, kills: 3 },
+    id: 'hot-wheels',
+    title: '3 · Hot Wheels',
+    briefing: "Ray Calloway wants a Vesper GT — the purple one that cruises Palm Heights. Steal it and bring it to his chop shop. The cops will notice a stolen GT, so lose them or outrun them.",
+    reward: 800,
+    objectives: [
+      { id: 'steal-gt', text: 'Steal the purple Vesper GT', kind: 'steal-gt' },
+      { id: 'deliver-shop', text: 'Deliver the GT to the Chop Shop', place: 'chopShop', kind: 'reach', radius: 140, inCar: 'Vesper GT' },
     ],
   },
   {
-    title: 'Heat Wave',
-    briefing: 'Mara: "You made the evening news, Jax. Three stars and every cruiser in Solmar is looking for you. Lose them, then get to the safehouse."',
-    reward: MISSION_REWARDS[3],
-    steps: [
-      { kind: 'survive', label: 'Survive the heat — lose the wanted level', x: 3060, y: 2700, seconds: 45 },
-      { kind: 'goto', label: 'Reach the Safehouse', x: 3060, y: 2700 },
+    id: 'heat-wave',
+    title: '4 · Heat Wave',
+    briefing: 'The job went loud and Solmar PD is all over you. Survive three stars of heat for 60 seconds — stay moving, stay out of the cruisers\' way, and do not get caught on foot.',
+    reward: 900,
+    objectives: [
+      { id: 'survive', text: 'Survive the heat: 60 seconds at 3 stars', kind: 'survive', seconds: 60, setWanted: 3 },
     ],
   },
   {
-    title: 'The Bay Job',
-    briefing: 'Mara: "The big one. Bay Bank, midday, in and out. Grab the cash, then run — the whole city will be on you. Make it to the safehouse and we are both rich."',
-    reward: MISSION_REWARDS[4],
-    steps: [
-      { kind: 'goto', label: 'Get to Bay Bank', x: 1980, y: 1980 },
-      { kind: 'grab', label: 'Hold still in the bank to grab the cash', x: 1980, y: 1980, seconds: 3 },
-      { kind: 'goto', label: 'Escape to the Safehouse — the police are coming', x: 3060, y: 2700 },
+    id: 'the-marlin-job',
+    title: '5 · The Marlin Job',
+    briefing: 'The last job. A briefcase of Vesper money is changing hands on Sunset Pier, guarded by Harbormen. Take it, and the debt is gone. They will shoot — so will you.',
+    reward: 2000,
+    objectives: [
+      { id: 'goto-pier', text: 'Reach Sunset Pier', place: 'pier', kind: 'reach', radius: 140 },
+      { id: 'take-case', text: 'Take the briefcase from the Harbormen', kind: 'take-case', place: 'pier', radius: 90 },
+      { id: 'escape', text: 'Escape to your Hideout', place: 'hideout', kind: 'reach', radius: 130, needsItem: true },
     ],
   },
 ];
 
-export function missionCount() {
-  return MISSIONS.length;
-}
-
-/** The label the HUD shows for the mission's current step. */
-export function objectiveText(world) {
-  const mission = MISSIONS[world.mission.index];
-  if (!mission || world.mission.done) return 'All jobs done — Solmar is yours. Free roam!';
-  const step = mission.steps[world.mission.step];
-  let text = `${mission.title}: ${step.label}`;
-  if (step.kind === 'kill') text = `${mission.title}: Deal with the Vipers (${world.mission.kills}/${step.kills})`;
-  if (step.kind === 'survive') text = `${mission.title}: ${step.label} (${Math.ceil(world.mission.timer)}s)`;
-  if (step.kind === 'grab') text = `${mission.title}: ${step.label} (${world.mission.grab.toFixed(1)}s)`;
-  if (step.kind === 'goto' && step.seconds) text += ` (${Math.ceil(world.mission.timer)}s left)`;
-  return text;
-}
-
-/** Begin a mission: reset its runtime state and arm its first step. */
-export function beginMission(world, index) {
-  const mission = MISSIONS[index];
-  world.mission = {
-    index,
-    step: 0,
-    timer: mission.steps[0].seconds ?? 0,
-    kills: 0,
-    grab: 0,
-    done: false,
-    failed: false,
-    banner: mission.title,
-    bannerTimer: 3,
+export function createMissionState() {
+  return {
+    index: 0, // which mission is active
+    objectiveIndex: 0,
+    started: false,
+    completed: [], // mission ids finished
+    timer: 0,
+    hasItem: false,
+    gtStolen: false,
+    caseTaken: false,
+    enemies: [], // armed Harbormen for the finale
+    message: null,
+    messageTimer: 0,
   };
-  if (index === 3) {
-    // Heat Wave opens with the police already on the player.
-    world.wanted = 3;
-    world.wantedPoints = 3;
-  }
-  if (index === 4) world.wanted = 0;
-  return mission;
 }
 
-/** Advance to the next step, or finish the mission and pay out. Returns 'done' | 'step' | null. */
-export function advanceStep(world) {
-  const mission = MISSIONS[world.mission.index];
-  world.mission.step += 1;
-  if (world.mission.step >= mission.steps.length) {
-    world.mission.done = true;
-    world.cash += mission.reward;
-    world.stats.missionsDone += 1;
-    world.audio.cash();
-    return 'done';
-  }
-  const step = mission.steps[world.mission.step];
-  world.mission.timer = step.seconds ?? 0;
-  world.mission.grab = 0;
-  world.audio.pickup();
-  return 'step';
+export function currentMission(state) {
+  return MISSIONS[state.index] || null;
 }
 
-/**
- * Check the current step against the world; called every frame from the world
- * update. Returns 'done' when the mission completes, 'failed' when it fails.
- */
-export function updateMission(world, dt) {
-  const mission = MISSIONS[world.mission.index];
-  if (!mission || world.mission.done) return null;
-  const step = mission.steps[world.mission.step];
-  const player = world.player;
-
-  if (step.kind === 'steal') {
-    if (player.inCar) return advanceStep(world);
-    return null;
-  }
-  if (step.kind === 'goto') {
-    const dx = player.x - step.x;
-    const dy = player.y - step.y;
-    if (dx * dx + dy * dy < 90 * 90) {
-      return advanceStep(world);
-    }
-    if (step.seconds) {
-      world.mission.timer -= dt;
-      if (world.mission.timer <= 0) {
-        world.mission.failed = true;
-        return 'failed';
-      }
-    }
-    return null;
-  }
-  if (step.kind === 'kill') {
-    if (world.mission.kills >= step.kills) return advanceStep(world);
-    return null;
-  }
-  if (step.kind === 'survive') {
-    world.mission.timer -= dt;
-    if (world.wanted === 0) return advanceStep(world);
-    if (world.mission.timer <= 0) {
-      world.mission.failed = true;
-      return 'failed';
-    }
-    return null;
-  }
-  if (step.kind === 'grab') {
-    const dx = player.x - step.x;
-    const dy = player.y - step.y;
-    if (dx * dx + dy * dy < 100 * 100) {
-      world.mission.grab += dt;
-      if (world.mission.grab >= step.seconds) {
-        world.wanted = 4;
-        world.wantedPoints = 4;
-        return advanceStep(world);
-      }
-    } else {
-      world.mission.grab = 0;
-    }
-    return null;
-  }
-  return null;
+export function currentObjective(state) {
+  const m = currentMission(state);
+  return m ? m.objectives[state.objectiveIndex] : null;
 }
 
-/** Where the current step wants the player to go, for the marker and minimap. */
-export function missionMarker(world) {
-  const mission = MISSIONS[world.mission.index];
-  if (!mission || world.mission.done) return null;
-  const step = mission.steps[world.mission.step];
-  if (step.kind === 'steal') return null;
-  return { x: step.x, y: step.y, label: step.label };
+export function startMission(state, index) {
+  state.index = index;
+  state.objectiveIndex = 0;
+  state.started = true;
+  state.timer = 0;
+  state.hasItem = false;
+  state.gtStolen = false;
+  state.caseTaken = false;
+  state.enemies = [];
+}
+
+// Advance the objective when its condition is met. Returns 'objective' | 'mission' | null.
+export function advanceObjective(state) {
+  const m = currentMission(state);
+  if (!m) return null;
+  state.objectiveIndex++;
+  if (state.objectiveIndex >= m.objectives.length) {
+    state.completed.push(m.id);
+    state.started = false;
+    state.hasItem = false;
+    return 'mission';
+  }
+  return 'objective';
 }

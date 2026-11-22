@@ -1,143 +1,121 @@
-// The city of Solmar: a seeded street grid with blocks, buildings, parks, a beach
-// and a harbour along the south edge. Everything the game draws and drives on comes
-// from this one model, built once per game from the seed.
-import { BLOCK, CITY_SIZE, COLORS, ROAD_COUNT, ROAD_WIDTH } from './config.js';
+// Neon Tide — city.js
+// Builds Solmar Bay: a road grid, the blocks between the roads, the
+// buildings on them, and the named places the story sends the player to.
+// Everything is derived from one seed, so the city is the same every run.
 
-// Where a street centreline runs (roads are spaced BLOCK apart, inset half a block).
-export function roadCentres() {
-  const centres = [];
-  for (let i = 0; i < ROAD_COUNT; i += 1) centres.push(BLOCK / 2 + i * BLOCK);
-  return centres;
-}
+import { WORLD, DISTRICTS, COLORS } from './config.js';
+import { mulberry32, pick, range, int } from './rng.js';
 
-export function isOnRoad(x, y) {
-  for (let i = 0; i < ROAD_COUNT; i += 1) {
-    const c = BLOCK / 2 + i * BLOCK;
-    if (Math.abs(x - c) < ROAD_WIDTH / 2 || Math.abs(y - c) < ROAD_WIDTH / 2) return true;
+export function districtAt(x, y) {
+  for (const d of DISTRICTS) {
+    if (x >= d.x && x < d.x + d.w && y >= d.y && y < d.y + d.h) return d;
   }
-  return false;
+  return DISTRICTS[1];
 }
 
-/** The nearest point on the road network to (x, y), snapped to a lane centre. */
-export function nearestRoadPoint(x, y) {
-  let best = null;
-  let bestDist = Infinity;
-  for (let i = 0; i < ROAD_COUNT; i += 1) {
-    const c = BLOCK / 2 + i * BLOCK;
-    for (const point of [{ x: c, y }, { x, y: c }]) {
-      const d = (point.x - x) ** 2 + (point.y - y) ** 2;
-      if (d < bestDist) {
-        bestDist = d;
-        best = point;
-      }
-    }
-  }
-  return best;
-}
-
-export function buildCity(random) {
-  const centres = roadCentres();
+export function buildCity(seed) {
+  const rng = mulberry32(seed);
   const buildings = [];
-  const parks = [];
   const trees = [];
-  // The south strip is beach and harbour water; the north-east corner is the plaza.
-  const beach = { x: 0, y: CITY_SIZE - 260, w: CITY_SIZE, h: 260 };
-  const water = { x: 0, y: CITY_SIZE - 110, w: CITY_SIZE, h: 110 };
-  const plaza = { x: centres[6] - 110, y: centres[2] - 110, w: 220, h: 220 };
+  const colliders = []; // {x, y, w, h} axis-aligned solid rects
+  const parks = [];
 
-  for (let bx = 0; bx < ROAD_COUNT - 1; bx += 1) {
-    for (let by = 0; by < ROAD_COUNT - 1; by += 1) {
-      const x0 = centres[bx] + ROAD_WIDTH / 2 + 14;
-      const y0 = centres[by] + ROAD_WIDTH / 2 + 14;
-      const w = BLOCK - ROAD_WIDTH - 28;
-      const h = BLOCK - ROAD_WIDTH - 28;
-      // Skip blocks that fall in the beach strip.
-      if (y0 > CITY_SIZE - 300) continue;
-      // The plaza block stays open.
-      if (bx === 6 && by === 2) continue;
-      if (random.chance(0.16)) {
-        // A park block: grass and trees, walkable.
-        parks.push({ x: x0, y: y0, w, h });
-        const count = random.int(5, 9);
-        for (let i = 0; i < count; i += 1) {
-          trees.push({
-            x: x0 + random.range(24, w - 24),
-            y: y0 + random.range(24, h - 24),
-            r: random.range(10, 18),
-          });
+  const xs = WORLD.roadXs;
+  const ys = WORLD.roadYs;
+  const half = WORLD.roadWidth / 2;
+
+  // One block sits between each pair of neighbouring roads.
+  for (let i = 0; i < xs.length - 1; i++) {
+    for (let j = 0; j < ys.length - 1; j++) {
+      const bx = xs[i] + half + 14;
+      const by = ys[j] + half + 14;
+      const bw = xs[i + 1] - xs[i] - WORLD.roadWidth - 28;
+      const bh = ys[j + 1] - ys[j] - WORLD.roadWidth - 28;
+      const district = districtAt(bx + bw / 2, by + bh / 2);
+
+      if (district.style === 'park') {
+        parks.push({ x: bx, y: by, w: bw, h: bh });
+        for (let t = 0; t < 14; t++) {
+          trees.push({ x: range(rng, bx + 20, bx + bw - 20), y: range(rng, by + 20, by + bh - 20), r: range(rng, 9, 15) });
         }
         continue;
       }
-      // One or two buildings per block, with a gap between them.
-      const split = random.chance(0.55);
-      const spots = split
-        ? [
-            { x: x0, y: y0, w: w * 0.46, h },
-            { x: x0 + w * 0.54, y: y0, w: w * 0.46, h },
-          ]
-        : [{ x: x0, y: y0, w, h }];
-      for (const spot of spots) {
-        const inset = random.chance(0.4) ? random.range(0, 40) : 0;
-        buildings.push({
-          x: spot.x + inset,
-          y: spot.y + inset,
-          w: spot.w - inset * 2,
-          h: spot.h - inset * 2,
-          color: random.pick(COLORS.buildingRoof),
-          floors: random.int(1, 5),
-        });
+
+      // Split the block into 1-4 buildings with a little breathing room.
+      const cols = int(rng, 1, 2);
+      const rows = int(rng, 1, 2);
+      const gap = 18;
+      const cw = (bw - gap * (cols - 1)) / cols;
+      const ch = (bh - gap * (rows - 1)) / rows;
+      for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+          if (rng() < 0.12) continue; // an empty lot, for variety
+          const w = cw * range(rng, 0.55, 0.95);
+          const h = ch * range(rng, 0.55, 0.95);
+          const x = bx + c * (cw + gap) + (cw - w) / 2;
+          const y = by + r * (ch + gap) + (ch - h) / 2;
+          const tall = district.style === 'downtown' ? int(rng, 2, 5) : 1;
+          const roof = district.style === 'downtown'
+            ? pick(rng, COLORS.downtownRoof)
+            : pick(rng, COLORS.buildingRoof);
+          const b = { x, y, w, h, roof, tall, district: district.style };
+          buildings.push(b);
+          colliders.push({ x, y, w, h });
+        }
+      }
+      // A few palm trees along the block's edge.
+      for (let t = 0; t < 3; t++) {
+        trees.push({ x: range(rng, bx, bx + bw), y: by + 4, r: range(rng, 7, 11) });
       }
     }
   }
 
-  // Named landmarks the missions and the HUD can point at.
-  const landmarks = [
-    { name: 'Harbour Market', x: centres[2], y: centres[8] },
-    { name: 'Solmar Plaza', x: centres[6], y: centres[2] },
-    { name: 'Villa Rosa', x: centres[8], y: centres[4] },
-    { name: 'North Garage', x: centres[1], y: centres[1] },
-    { name: 'Bay Bank', x: centres[5], y: centres[5] },
-    { name: 'Safehouse', x: centres[8], y: centres[7] },
-    { name: 'Pier 9', x: centres[4], y: CITY_SIZE - 320 },
-  ];
-
-  return {
-    size: CITY_SIZE,
-    centres,
-    buildings,
-    parks,
-    trees,
-    beach,
-    water,
-    plaza,
-    landmarks,
+  // Named story places, pinned to fixed spots so missions can find them.
+  const landmarks = {
+    vesperClub: { name: 'The Vesper Club', x: 1400, y: 1400, label: 'Vesper Club' },
+    marina: { name: 'Solmar Marina', x: 2900, y: 2700, label: 'Marina' },
+    chopShop: { name: "Ray's Chop Shop", x: 400, y: 2600, label: 'Chop Shop' },
+    clinic: { name: 'Bay Clinic', x: 2600, y: 600, label: 'Clinic' },
+    pier: { name: 'Sunset Pier', x: 3150, y: 1600, label: 'Pier' },
+    park: { name: 'Palm Court Park', x: 2400, y: 400, label: 'Park' },
+    hideout: { name: "Milo's Hideout", x: 600, y: 600, label: 'Hideout' },
   };
+
+  return { buildings, trees, colliders, parks, landmarks, seed };
 }
 
-/** Push a circle (x, y, r) out of every building it overlaps; returns true on a hit. */
-export function collideBuildings(city, body) {
-  let hit = false;
-  for (const b of city.buildings) {
-    const cx = Math.max(b.x, Math.min(body.x, b.x + b.w));
-    const cy = Math.max(b.y, Math.min(body.y, b.y + b.h));
-    const dx = body.x - cx;
-    const dy = body.y - cy;
-    const d2 = dx * dx + dy * dy;
-    if (d2 < body.r * body.r) {
-      hit = true;
-      if (d2 > 0.01) {
-        const d = Math.sqrt(d2);
-        body.x = cx + (dx / d) * body.r;
-        body.y = cy + (dy / d) * body.r;
-      } else {
-        body.x += body.r;
-      }
-    }
+// True when the point is on a road (drivable) rather than inside a block.
+export function onRoad(x, y) {
+  const half = WORLD.roadWidth / 2;
+  for (const rx of WORLD.roadXs) if (Math.abs(x - rx) <= half) return true;
+  for (const ry of WORLD.roadYs) if (Math.abs(y - ry) <= half) return true;
+  return false;
+}
+
+// Nearest road centre line to a point, used to snap traffic onto lanes.
+export function nearestRoadX(x) {
+  let best = WORLD.roadXs[0];
+  for (const rx of WORLD.roadXs) if (Math.abs(rx - x) < Math.abs(best - x)) best = rx;
+  return best;
+}
+export function nearestRoadY(y) {
+  let best = WORLD.roadYs[0];
+  for (const ry of WORLD.roadYs) if (Math.abs(ry - y) < Math.abs(best - y)) best = ry;
+  return best;
+}
+
+// Axis-aligned rect vs the city's solid buildings. Returns the collider hit, or null.
+export function hitBuilding(city, x, y, w, h) {
+  for (const c of city.colliders) {
+    if (x < c.x + c.w && x + w > c.x && y < c.y + c.h && y + h > c.y) return c;
   }
-  return hit;
+  return null;
 }
 
-/** True when the point is in the sea (not walkable, not drivable). */
-export function inWater(city, x, y) {
-  return x >= city.water.x && x <= city.water.x + city.water.w && y >= city.water.y && y <= city.water.y + city.water.h;
+// Clamp a point inside the playable world (ocean is a wall of water).
+export function clampToWorld(x, y, margin = 16) {
+  return {
+    x: Math.max(margin, Math.min(WORLD.width - margin, x)),
+    y: Math.max(margin, Math.min(WORLD.height - margin, y)),
+  };
 }
